@@ -1,4 +1,4 @@
-local CSVFile = loadfile("/SCRIPTS/TOOLS/LogViewer/csvfile.lua")()
+local LogFile = loadfile("/SCRIPTS/TOOLS/LogViewer/logfile.lua")()
 
 -- Class LogFiles
 local LOG_DIR = "/LOGS"
@@ -25,7 +25,7 @@ function LogFiles:read()
             if not self.logFiles[model] then
                 self.logFiles[model] = {}
             end
-            append(self.logFiles[model], CSVFile.new(f))
+            append(self.logFiles[model], LogFile.new(f))
         end
     end
 end

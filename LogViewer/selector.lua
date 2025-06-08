@@ -8,7 +8,11 @@ Selector.STATE_EDITING = 2
 function Selector.new(values, index)
     local self = setmetatable({}, Selector)
     self.index = index or 1
-    self.values = values or {"-"}
+    if values and #values > 0 then
+        self.values = values
+    else
+        self.values = {"-"}
+    end
     self.state = self.STATE_IDLE
     return self
 end
@@ -25,7 +29,11 @@ function Selector:setOnChange(f)
 end
 
 function Selector:setValues(values)
-    self.values = values
+    if values and #values > 0 then
+        self.values = values
+    else        
+        self.values = {"-"}
+    end
 end
 
 function Selector:setIndex(index)

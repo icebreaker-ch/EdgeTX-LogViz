@@ -1,18 +1,19 @@
-local CSVFile = loadfile("/SCRIPTS/TOOLS/LogViewer/csvfile.lua")()
 local Selector = loadfile("/SCRIPTS/TOOLS/LogViewer/selector.lua")()
 local Button = loadfile("/SCRIPTS/TOOLS/LogViewer/button.lua")()
 local LogFiles = loadfile("/SCRIPTS/TOOLS/LogViewer/logfiles.lua")()
 
-local STATE_IDLE = 0
-local STATE_CHOICE_MODEL_SELECTED = 1
-local STATE_CHOICE_MODEL_EDITING = 2
-local STATE_CHOICE_FILE_SELECTED = 3
-local STATE_CHOICE_FILE_EDITING = 4
-local STATE_CHOICE_FIELD_SELECTED = 5
-local STATE_CHOICE_FIELD_EDITING = 6
-local STATE_BUTTON_EXIT_SELECTED = 7
-local STATE_BUTTON_VIEW_SELECTED = 8
-local STATE_VIEW_LOG = 9
+local LEFT = 1
+local SMALL_FONT_H = 8
+local SMALL_FONT_W = 5
+local STATE_CHOICE_MODEL_SELECTED = 0
+local STATE_CHOICE_MODEL_EDITING = 1
+local STATE_CHOICE_FILE_SELECTED = 2
+local STATE_CHOICE_FILE_EDITING = 3
+local STATE_CHOICE_FIELD_SELECTED = 4
+local STATE_CHOICE_FIELD_EDITING = 5
+local STATE_BUTTON_EXIT_SELECTED = 6
+local STATE_BUTTON_VIEW_SELECTED = 7
+local STATE_VIEW_LOG = 8
 
 local LogViewer = {}
 LogViewer.__index = LogViewer
@@ -25,7 +26,8 @@ function LogViewer.new()
     self.fieldSelector = Selector.new()
     self.exitButton = Button.new("Exit")
     self.viewButton = Button.new("View Log")
-    self.state = STATE_IDLE
+    self.modelSelector:setState(Selector.STATE_SELECTED)
+    self.state = STATE_CHOICE_MODEL_SELECTED
     return self
 end
 
@@ -57,9 +59,7 @@ end
 
 function LogViewer:run(event)
     local result = 0
-    if self.state == STATE_IDLE then
-        result = self:handleIdle(event)
-    elseif self.state == STATE_CHOICE_MODEL_SELECTED then
+    if self.state == STATE_CHOICE_MODEL_SELECTED then
         result = self:handleModelSelected(event)
     elseif self.state == STATE_CHOICE_MODEL_EDITING then
         result = self:handleModelEditing(event)
@@ -79,15 +79,6 @@ function LogViewer:run(event)
         result = self:handleViewLog(event)
     end
     return result
-end
-
-function LogViewer:handleIdle(event)
-    if event == EVT_VIRTUAL_NEXT then
-        self.modelSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_MODEL_SELECTED
-    end
-    self:updateUi()
-    return 0
 end
 
 function LogViewer:handleModelSelected(event)
@@ -199,7 +190,7 @@ end
 
 function LogViewer:handleButtonViewSelected(event)
     if event == EVT_VIRTUAL_ENTER then
-        self.viewButton:setState(Button.STATE_SELECTED)
+        self.viewButton:setState(Button.STATE_IDLE)
         self:updateLogView()
         self.state = STATE_VIEW_LOG
     elseif event == EVT_VIRTUAL_NEXT then
@@ -218,7 +209,8 @@ end
 
 function LogViewer:handleViewLog(event)
     if event == EVT_VIRTUAL_EXIT then
-        self.state = STATE_IDLE
+        self.fieldSelector:setState(Selector.STATE_SELECTED)
+        self.state = STATE_CHOICE_FIELD_SELECTED
     end
     return 0
 end
@@ -259,19 +251,32 @@ function LogViewer:updateLogView()
     local min, max = getMinMax(fieldValues)
     local count = #fieldValues
     if min and max then
+        lcd.drawText(0, 0, string.format("%.2f", max), SMLSIZE)
+        lcd.drawText(0, LCD_H - SMALL_FONT_H, string.format("%.2f", min), SMLSIZE)
+        lcd.drawText(LCD_W - SMALL_FONT_W * #field, 0, field, SMLSIZE)
+        local dMinMax = max - min
+        local lastX, lastY
         local pos = 0
-        for _, v in pairs(fieldValues) do
+        for _, value in pairs(fieldValues) do
             local x = math.floor(pos / count * LCD_W)
-            local y = LCD_H - math.floor((v - min) / (max - min) * LCD_H)
-            lcd.drawPoint(x, y)
+            local y
+            if dMinMax ~= 0 then
+                y = LCD_H - math.floor((value - min) / dMinMax * LCD_H)
+            else
+                y = LCD_H / 2
+            end
+            if lastX and lastY then
+                lcd.drawLine(lastX, lastY, x, y, SOLID, 0)
+            else
+                lcd.drawPoint(x, y)
+            end
+            lastX, lastY = x, y
             pos = pos + 1
         end
     end
 end
 
 function LogViewer:updateUi()
-    local LEFT = 0
-
     lcd.clear()
     lcd.drawText(LEFT, 0, "LogViewer", INVERS)
     lcd.drawText(LEFT, 10, "Model:")
