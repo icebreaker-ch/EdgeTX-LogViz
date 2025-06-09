@@ -1,10 +1,14 @@
-local Selector = loadfile("/SCRIPTS/TOOLS/LogViewer/selector.lua")()
-local Button = loadfile("/SCRIPTS/TOOLS/LogViewer/button.lua")()
-local LogFiles = loadfile("/SCRIPTS/TOOLS/LogViewer/logfiles.lua")()
+LIB_DIR = "/SCRIPTS/TOOLS/LogViz/"
+
+local Selector = loadfile(LIB_DIR .. "selector.lua")()
+local Button = loadfile(LIB_DIR .. "button.lua")()
+local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 
 local LEFT = 1
 local SMALL_FONT_H = 8
 local SMALL_FONT_W = 5
+local EXCLUDE_FIELDS = {["Date"] = true, ["Time"] = true}
+
 local STATE_CHOICE_MODEL_SELECTED = 0
 local STATE_CHOICE_MODEL_EDITING = 1
 local STATE_CHOICE_FILE_SELECTED = 2
@@ -13,13 +17,14 @@ local STATE_CHOICE_FIELD_SELECTED = 4
 local STATE_CHOICE_FIELD_EDITING = 5
 local STATE_BUTTON_EXIT_SELECTED = 6
 local STATE_BUTTON_VIEW_SELECTED = 7
-local STATE_VIEW_LOG = 8
+local STATE_PREPARE_VIEW = 8
+local STATE_VIEW_LOG = 9
 
-local LogViewer = {}
-LogViewer.__index = LogViewer
+local LogViz = {}
+LogViz.__index = LogViz
 
-function LogViewer.new()
-    local self = setmetatable({}, LogViewer)
+function LogViz.new()
+    local self = setmetatable({}, LogViz)
     self.logFiles = LogFiles.new()
     self.modelSelector = Selector.new()
     self.fileSelector = Selector.new()
@@ -27,26 +32,29 @@ function LogViewer.new()
     self.exitButton = Button.new("Exit")
     self.viewButton = Button.new("View Log")
     self.modelSelector:setState(Selector.STATE_SELECTED)
+    self.yMin = nil
+    self.yMax = nil
+    self.viewData = nil
     self.state = STATE_CHOICE_MODEL_SELECTED
     return self
 end
 
-function LogViewer:onModelChange(index)
+function LogViz:onModelChange(index)
     local model = self.modelSelector:getValue()
     local dates = self.logFiles:getDates(model)
     self.fileSelector:setValues(dates)
     self.fileSelector:setIndex(1)
 end
 
-function LogViewer:onFileChange(index)
+function LogViz:onFileChange(index)
     local model = self.modelSelector:getValue()
     local logFile = self.logFiles:getFile(model, index)
-    local fields = logFile:getFields()
+    local fields = logFile:getFields(EXCLUDE_FIELDS)
     self.fieldSelector:setValues(fields)
     self.fieldSelector:setIndex(1)
 end
 
-function LogViewer:init()
+function LogViz:init()
     self.logFiles:read()
     local models = self.logFiles:getModels()
     self.modelSelector:setOnChange(function(index) self:onModelChange(index) end)
@@ -57,7 +65,7 @@ function LogViewer:init()
     self.modelSelector:setIndex(1)
 end
 
-function LogViewer:run(event)
+function LogViz:run(event)
     local result = 0
     if self.state == STATE_CHOICE_MODEL_SELECTED then
         result = self:handleModelSelected(event)
@@ -75,13 +83,15 @@ function LogViewer:run(event)
         result = self:handleButtonExitSelected(event)
     elseif self.state == STATE_BUTTON_VIEW_SELECTED then
         result = self:handleButtonViewSelected(event)
+    elseif self.state == STATE_PREPARE_VIEW then
+        result = self:handlePrepareView(event)
     elseif self.state == STATE_VIEW_LOG then
         result = self:handleViewLog(event)
     end
     return result
 end
 
-function LogViewer:handleModelSelected(event)
+function LogViz:handleModelSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.modelSelector:setState(Selector.STATE_EDITING)
         self.state = STATE_CHOICE_MODEL_EDITING
@@ -91,14 +101,14 @@ function LogViewer:handleModelSelected(event)
         self.state = STATE_CHOICE_FILE_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
         self.modelSelector:setState(Selector.STATE_IDLE)
-        self.fieldSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FIELD_SELECTED
+        self.viewButton:setState(Button.STATE_SELECTED)
+        self.state = STATE_BUTTON_VIEW_SELECTED
     end
     self:updateUi()
     return 0
 end
 
-function LogViewer:handleModelEditing(event)
+function LogViz:handleModelEditing(event)
     if event == EVT_VIRTUAL_NEXT then
         self.modelSelector:incValue()
     elseif event == EVT_VIRTUAL_PREV then
@@ -111,7 +121,7 @@ function LogViewer:handleModelEditing(event)
     return 0
 end
 
-function LogViewer:handleFileSelected(event)
+function LogViz:handleFileSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.fileSelector:setState(Selector.STATE_EDITING)
         self.state = STATE_CHOICE_FILE_EDITING
@@ -128,7 +138,7 @@ function LogViewer:handleFileSelected(event)
     return 0
 end
 
-function LogViewer:handleFileEditing(event)
+function LogViz:handleFileEditing(event)
     if event == EVT_VIRTUAL_NEXT then
         self.fileSelector:incValue()
     elseif event == EVT_VIRTUAL_PREV then
@@ -141,7 +151,7 @@ function LogViewer:handleFileEditing(event)
     return 0
 end
 
-function LogViewer:handleFieldSelected(event)
+function LogViz:handleFieldSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.fieldSelector:setState(Selector.STATE_EDITING)
         self.state = STATE_CHOICE_FIELD_EDITING
@@ -158,7 +168,7 @@ function LogViewer:handleFieldSelected(event)
     return 0
 end
 
-function LogViewer:handleFieldEditing(event)
+function LogViz:handleFieldEditing(event)
     if event == EVT_VIRTUAL_NEXT then
         self.fieldSelector:incValue()
     elseif event == EVT_VIRTUAL_PREV then
@@ -171,7 +181,7 @@ function LogViewer:handleFieldEditing(event)
     return 0
 end
 
-function LogViewer:handleButtonExitSelected(event)
+function LogViz:handleButtonExitSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.exitButton:setState(Button.STATE_SELECTED)
         return 1 -- Exit
@@ -188,11 +198,11 @@ function LogViewer:handleButtonExitSelected(event)
     return 0
 end
 
-function LogViewer:handleButtonViewSelected(event)
+function LogViz:handleButtonViewSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.viewButton:setState(Button.STATE_IDLE)
-        self:updateLogView()
-        self.state = STATE_VIEW_LOG
+        self:message("Reading values...")
+        self.state = STATE_PREPARE_VIEW
     elseif event == EVT_VIRTUAL_NEXT then
         self.viewButton:setState(Button.STATE_IDLE)
         self.modelSelector:setState(Selector.STATE_SELECTED)
@@ -207,66 +217,52 @@ function LogViewer:handleButtonViewSelected(event)
     return 0
 end
 
-function LogViewer:handleViewLog(event)
-    if event == EVT_VIRTUAL_EXIT then
-        self.fieldSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FIELD_SELECTED
-    end
-    return 0
-end
-
-local function getMinMax(values)
-    local min
-    local max
-    for _, v in pairs(values) do
+function LogViz:updateMinMax()
+    self.yMin = nil
+    self.yMax = nil
+    for _, v in pairs(self.viewData) do
         local val = tonumber(v)
         if val then
-            if not min or val < min then
-                min = val
+            if not self.yMin or val < self.yMin then
+                self.yMin = val
             end
-            if not max or val > max then
-                max = val
+            if not self.yMax or val > self.yMax then
+                self.yMax = val
             end
         end
     end
-    return min, max
 end
 
-function LogViewer:updateLogView()
-    local model = self.modelSelector:getValue()
-    local index = self.fileSelector:getIndex()
-    local field = self.fieldSelector:getValue()
-    local logFile = self.logFiles:getFile(model, index)
+local function map(value, sourceMin, sourceMax, targetMin, targetMax)
+    return targetMin + (value - sourceMin) / (sourceMax - sourceMin) * (targetMax - targetMin)
+end
 
-    local fieldValues = {}
-    local index = 1
+local function round(value)
+    return math.floor(value + 0.5)
+end
+
+function LogViz:updateView()
+    local field = self.fieldSelector:getValue()
 
     lcd.clear()
-
-    for map in logFile:values() do
-        fieldValues[index] = map[field]
-        index = index + 1
-    end
-
-    local min, max = getMinMax(fieldValues)
-    local count = #fieldValues
-    if min and max then
-        lcd.drawText(0, 0, string.format("%.2f", max), SMLSIZE)
-        lcd.drawText(0, LCD_H - SMALL_FONT_H, string.format("%.2f", min), SMLSIZE)
+    local count = #self.viewData
+    if self.yMin and self.yMax then
+        lcd.drawText(0, 0, string.format("%.2f", self.yMax), SMLSIZE)
+        lcd.drawText(0, LCD_H - SMALL_FONT_H, string.format("%.2f", self.yMin), SMLSIZE)
         lcd.drawText(LCD_W - SMALL_FONT_W * #field, 0, field, SMLSIZE)
-        local dMinMax = max - min
+
         local lastX, lastY
         local pos = 0
-        for _, value in pairs(fieldValues) do
-            local x = math.floor(pos / count * LCD_W)
+        for _, value in pairs(self.viewData) do
+            local x = round(map(pos, 0, count - 1, 0, LCD_W - 1))
             local y
-            if dMinMax ~= 0 then
-                y = LCD_H - math.floor((value - min) / dMinMax * LCD_H)
+            if self.yMax ~= self.yMin then
+                y = round(map(value, self.yMin, self.yMax, LCD_H - 1, 0))
             else
                 y = LCD_H / 2
             end
             if lastX and lastY then
-                lcd.drawLine(lastX, lastY, x, y, SOLID, 0)
+                lcd.drawLine(lastX, lastY, x, y, SOLID, FORCE)
             else
                 lcd.drawPoint(x, y)
             end
@@ -276,9 +272,41 @@ function LogViewer:updateLogView()
     end
 end
 
-function LogViewer:updateUi()
+function LogViz:handlePrepareView()
+    local model = self.modelSelector:getValue()
+    local index = self.fileSelector:getIndex()
+    local field = self.fieldSelector:getValue()
+    local logFile = self.logFiles:getFile(model, index)
+
+    self.viewData = {}
+    local index = 1
+
+    for map in logFile:values() do
+        self.viewData[index] = map[field]
+        index = index + 1
+    end
+    self:updateMinMax()
+    self:updateView()
+    self.state = STATE_VIEW_LOG
+    return 0
+end
+
+function LogViz:handleViewLog(event)
+    if event == EVT_VIRTUAL_EXIT then
+        self.fieldSelector:setState(Selector.STATE_SELECTED)
+        self.state = STATE_CHOICE_FIELD_SELECTED
+    end
+    return 0
+end
+
+function LogViz:message(text)
     lcd.clear()
-    lcd.drawText(LEFT, 0, "LogViewer", INVERS)
+    lcd.drawText(25, 30, "Reading values...")
+end
+
+function LogViz:updateUi()
+    lcd.clear()
+    lcd.drawText(LEFT, 0, "LogViz", INVERS)
     lcd.drawText(LEFT, 10, "Model:")
     lcd.drawText(35, 10, self.modelSelector:getValue(), self.modelSelector:getFlags())
     lcd.drawText(LEFT, 20, "File:")
@@ -289,6 +317,6 @@ function LogViewer:updateUi()
     lcd.drawText(35, 50, self.viewButton:getText(), self.viewButton:getFlags())
 end
 
-local logViewer = LogViewer.new()
+local logViewer = LogViz.new()
 
 return { init = function() logViewer:init() end, run = function(event) return logViewer:run(event) end }

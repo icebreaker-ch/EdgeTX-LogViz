@@ -1,4 +1,4 @@
-local LogFile = loadfile("/SCRIPTS/TOOLS/LogViewer/logfile.lua")()
+local LogFile = loadfile(LIB_DIR .. "logfile.lua")()
 
 -- Class LogFiles
 local LOG_DIR = "/LOGS"

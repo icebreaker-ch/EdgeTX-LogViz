@@ -44,7 +44,7 @@ end
 
 -- Values iterator returns key/value table
 function LogFile:values()
-    local keys = {}
+    local fields = {}
     local f = io.open(PATH .. "/" .. self.fileName, "r")
     local firstLine = true
     local lines = self:lines()
@@ -53,15 +53,15 @@ function LogFile:values()
         for line in lines do
             local index = 1
             if firstLine then
-                for key in string.gmatch(line, PATTERN_FIELD) do
-                    keys[index] = key
+                for field in string.gmatch(line, PATTERN_FIELD) do
+                    fields[index] = field
                     index = index + 1
                 end
                 firstLine = false
             else
                 local values = {}
                 for value in string.gmatch(line, PATTERN_FIELD) do
-                    values[keys[index]] = tonumber(value)
+                    values[fields[index]] = tonumber(value)
                     index = index + 1
                 end
                 return values
@@ -86,14 +86,16 @@ function LogFile:getDate()
     return d
 end
 
-function LogFile:getFields()
+function LogFile:getFields(exclude)
     local fields = {}
     local firstLine = self:lines()()
     if firstLine then
         local index = 1
         for field in string.gmatch(firstLine, PATTERN_FIELD) do
-            fields[index] = field
-            index = index + 1
+            if not exclude or not exclude[field] then
+                fields[index] = field
+                index = index + 1
+            end
         end
     end
     return fields
