@@ -35,6 +35,7 @@ function LogViz.new()
     self.yMin = nil
     self.yMax = nil
     self.viewData = nil
+    self.cursorPos = 0
     self.state = STATE_CHOICE_MODEL_SELECTED
     return self
 end
@@ -257,7 +258,7 @@ function LogViz:updateView()
             local x = round(map(pos, 0, count - 1, 0, LCD_W - 1))
             local y
             if self.yMax ~= self.yMin then
-                y = round(map(value, self.yMin, self.yMax, LCD_H - 1, 0))
+                y = round(map(value, self.yMin, self.yMax, LCD_H - 1, SMALL_FONT_H))
             else
                 y = LCD_H / 2
             end
@@ -269,10 +270,14 @@ function LogViz:updateView()
             lastX, lastY = x, y
             pos = pos + 1
         end
+        lcd.drawLine(self.cursorPos, SMALL_FONT_H, self.cursorPos, LCD_H - 1, DOTTED, FORCE)
+        local index = round(map(self.cursorPos, 0, LCD_W - 1, 1, #self.viewData))
+        local cursorValue = self.viewData[index]
+        lcd.drawText(LCD_W / 2 - 3 * SMALL_FONT_W, 0, string.format("%.2f", cursorValue), SMLSIZE)
     end
 end
 
-function LogViz:handlePrepareView()
+function LogViz:handlePrepareView(event)
     local model = self.modelSelector:getValue()
     local index = self.fileSelector:getIndex()
     local field = self.fieldSelector:getValue()
@@ -285,6 +290,7 @@ function LogViz:handlePrepareView()
         self.viewData[index] = map[field]
         index = index + 1
     end
+    self.cursorPos = 0
     self:updateMinMax()
     self:updateView()
     self.state = STATE_VIEW_LOG
@@ -292,7 +298,19 @@ function LogViz:handlePrepareView()
 end
 
 function LogViz:handleViewLog(event)
-    if event == EVT_VIRTUAL_EXIT then
+    if event == EVT_VIRTUAL_NEXT then
+        self.cursorPos = self.cursorPos + 1
+        if self.cursorPos > LCD_W - 1 then
+            self.cursorPos = LCD_W - 1
+        end
+        self:updateView()
+    elseif event == EVT_VIRTUAL_PREV then
+        self.cursorPos = self.cursorPos - 1
+        if self.cursorPos < 0 then
+            self.cursorPos = 0
+        end
+        self:updateView()
+    elseif event == EVT_VIRTUAL_EXIT then
         self.fieldSelector:setState(Selector.STATE_SELECTED)
         self.state = STATE_CHOICE_FIELD_SELECTED
     end
