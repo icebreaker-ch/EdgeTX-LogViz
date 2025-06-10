@@ -23,7 +23,7 @@ function LogFile:lines()
     local buffer = io.read(f, BUFFER_SIZE)
 
     return function()
-        while buffer and #buffer > 0 do
+        while buffer do
             local s, e = string.find(buffer, PATTERN_LINE)
             if s and e then
                 local line = string.sub(buffer, s, e)
@@ -31,11 +31,12 @@ function LogFile:lines()
                 return (line)
             else
                 local chunk = io.read(f, BUFFER_SIZE)
-                if chunk then
+                if chunk and #chunk > 0 then
                     buffer = buffer .. chunk --append buffer
                 else
                     buffer = nil
                     io.close(f)
+                    return nil
                 end
             end
         end
@@ -45,7 +46,6 @@ end
 -- Values iterator returns key/value table
 function LogFile:values()
     local fields = {}
-    local f = io.open(PATH .. "/" .. self.fileName, "r")
     local firstLine = true
     local lines = self:lines()
 
