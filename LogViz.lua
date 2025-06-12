@@ -20,6 +20,8 @@ local STATE_BUTTON_VIEW_SELECTED = 7
 local STATE_PREPARE_VIEW = 8
 local STATE_VIEW_LOG = 9
 
+local SHOW_CURSOR_HINT_SECONDS = 1
+
 local LogViz = {}
 LogViz.__index = LogViz
 
@@ -32,10 +34,13 @@ function LogViz.new()
     self.exitButton = Button.new("Exit")
     self.viewButton = Button.new("View Log")
     self.modelSelector:setState(Selector.STATE_SELECTED)
+    self.xMin = nil
+    self.xMax = nil
     self.yMin = nil
     self.yMax = nil
     self.viewData = nil
-    self.cursorPos = 0
+    self.cursorPos = 0    
+    self.cursorTimer = nil
     self.state = STATE_CHOICE_MODEL_SELECTED
     return self
 end
@@ -242,7 +247,7 @@ local function round(value)
     return math.floor(value + 0.5)
 end
 
-function LogViz:updateView()
+function LogViz:updateView(showCursorHint)
     local field = self.fieldSelector:getValue()
 
     lcd.clear()
@@ -276,7 +281,23 @@ function LogViz:updateView()
         local index = round(map(self.cursorPos, 0, LCD_W - 1, 1, #self.viewData))
         local cursorValue = self.viewData[index]
         lcd.drawText(LCD_W / 2 - 3 * SMALL_FONT_W, 0, string.format("%.2f", cursorValue), SMLSIZE)
+
+        if showCursorHint then
+            local cursorTime = map(self.cursorPos, 0, LCD_W - 1, self.xMin, self.xMax)
+            local timeString = string.format("%09d", cursorTime)
+            local displayString = string.sub(timeString, 1, 2)
+                .. ":" .. string.sub(timeString, 3, 4)
+                .. ":" .. string.sub(timeString, 5, 6)
+                .. "." .. string.sub(timeString, 7, 9)
+            lcd.drawText(LCD_W / 2 - 6 * SMALL_FONT_W, LCD_H / 3 - SMALL_FONT_H, displayString, SMLSIZE + INVERS)
+        end
     end
+end
+
+local function parseTime(timeString)
+    TIME_PATTERN = "(%d%d):(%d%d):(%d%d)%.(%d%d%d)"
+    local h, m, s, d =  string.match(timeString, TIME_PATTERN)
+    return d + 1000 * (s + 100 * (m + 100 * h))
 end
 
 function LogViz:handlePrepareView(event)
@@ -288,13 +309,24 @@ function LogViz:handlePrepareView(event)
     self.viewData = {}
     local index = 1
 
+    local minTimeString
+    local maxTimeString
+    local first = true
     for map in logFile:values() do
-        self.viewData[index] = tonumber(map[field])
+        self.viewData[index] = map[field]
+        if first then
+            minTimeString = map["Time"]
+            first = false
+        end
+        maxTimeString = map["Time"]
         index = index + 1
     end
     self.cursorPos = 0
+    self.cursorTimer = nil
     self:updateMinMax()
-    self:updateView()
+    self.xMin = parseTime(minTimeString)
+    self.xMax = parseTime(maxTimeString)
+    self:updateView(false)
     self.state = STATE_VIEW_LOG
     return 0
 end
@@ -305,16 +337,23 @@ function LogViz:handleViewLog(event)
         if self.cursorPos > LCD_W - 1 then
             self.cursorPos = LCD_W - 1
         end
-        self:updateView()
+        self:updateView(true)
+        self.cursorTimer = getRtcTime()
     elseif event == EVT_VIRTUAL_PREV then
         self.cursorPos = self.cursorPos - 1
         if self.cursorPos < 0 then
             self.cursorPos = 0
         end
-        self:updateView()
+        self:updateView(true)
+        self.cursorTimer = getRtcTime()
     elseif event == EVT_VIRTUAL_EXIT then
         self.fieldSelector:setState(Selector.STATE_SELECTED)
         self.state = STATE_CHOICE_FIELD_SELECTED
+    else
+        if self.cursorTimer and getRtcTime() - self.cursorTimer > SHOW_CURSOR_HINT_SECONDS then
+            self:updateView(false)
+            self.cursorTimer = nil
+        end
     end
     return 0
 end

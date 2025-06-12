@@ -61,7 +61,7 @@ function LogFile:values()
             else
                 local values = {}
                 for value in string.gmatch(line, PATTERN_FIELD) do
-                    values[fields[index]] = value
+                    values[fields[index]] = tonumber(value) or value
                     index = index + 1
                 end
                 return values
