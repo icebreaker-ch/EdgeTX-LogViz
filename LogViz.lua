@@ -263,7 +263,9 @@ function LogViz:updateView()
                 y = LCD_H / 2
             end
             if lastX and lastY then
-                lcd.drawLine(lastX, lastY, x, y, SOLID, FORCE)
+                if x ~= lastX or y ~= lastY then
+                    lcd.drawLine(lastX, lastY, x, y, SOLID, FORCE)
+                end
             else
                 lcd.drawPoint(x, y)
             end
@@ -287,7 +289,7 @@ function LogViz:handlePrepareView(event)
     local index = 1
 
     for map in logFile:values() do
-        self.viewData[index] = map[field]
+        self.viewData[index] = tonumber(map[field])
         index = index + 1
     end
     self.cursorPos = 0

@@ -61,7 +61,7 @@ function LogFile:values()
             else
                 local values = {}
                 for value in string.gmatch(line, PATTERN_FIELD) do
-                    values[fields[index]] = tonumber(value)
+                    values[fields[index]] = value
                     index = index + 1
                 end
                 return values
@@ -69,16 +69,6 @@ function LogFile:values()
         end
         return nil
     end
-end
-
-function LogFile:getValues(line)
-    local values = {}
-    local index = 1
-    for value in string.gmatch(line, PATTERN_FIELD) do
-        values[index] = tonumber(value)
-        index = index + 1
-    end
-    return values
 end
 
 function LogFile:getDate()
