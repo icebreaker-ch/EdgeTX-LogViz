@@ -1,8 +1,6 @@
 LogFile = {}
 LogFile.__index = LogFile
 
-local EOL = '\n'
-local SEP = ','
 local PATTERN_FIELD = "[^,]+"
 local PATTERN_LINE = "[^\n]+\n"
 local BUFFER_SIZE = 1024
@@ -44,7 +42,7 @@ function LogFile:lines()
     end
 end
 
--- Values iterator returns key/value table
+-- Entries iterator returns entries, containing date, time and value
 function LogFile:entries(field)
     local fields = {}
     local firstLine = true
@@ -54,8 +52,8 @@ function LogFile:entries(field)
         for line in lines do
             if firstLine then
                 local index = 1
-                for field in string.gmatch(line, PATTERN_FIELD) do
-                    fields[index] = field
+                for fieldName in string.gmatch(line, PATTERN_FIELD) do
+                    fields[index] = fieldName
                     index = index + 1
                 end
                 firstLine = false
@@ -82,6 +80,10 @@ end
 function LogFile:getDate()
     local _, d = string.match(self.fileName, DATETIME_PATTERN)
     return d
+end
+
+function LogFile:getSize()
+    return fstat(PATH .. "/" .. self.fileName).size
 end
 
 function LogFile:getFields(exclude)
