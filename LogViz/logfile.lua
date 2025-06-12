@@ -8,7 +8,8 @@ local PATTERN_LINE = "[^\n]+\n"
 local BUFFER_SIZE = 1024
 local DATETIME_PATTERN = "(.*)%-(%d%d%d%d%-%d%d%-%d%d%-%d%d%d%d%d%d)%.csv$"
 local PATH = "/LOGS"
-
+local FIELD_DATE = "Date"
+local FIELD_TIME = "Time"
 
 function LogFile.new(fileName)
     local self = setmetatable({}, LogFile)
@@ -44,27 +45,34 @@ function LogFile:lines()
 end
 
 -- Values iterator returns key/value table
-function LogFile:values()
+function LogFile:entries(field)
     local fields = {}
     local firstLine = true
     local lines = self:lines()
 
     return function()
         for line in lines do
-            local index = 1
             if firstLine then
+                local index = 1
                 for field in string.gmatch(line, PATTERN_FIELD) do
                     fields[index] = field
                     index = index + 1
                 end
                 firstLine = false
             else
-                local values = {}
+                local entry = {}
+                local fieldIndex = 1
                 for value in string.gmatch(line, PATTERN_FIELD) do
-                    values[fields[index]] = tonumber(value) or value
-                    index = index + 1
+                    if fields[fieldIndex] == FIELD_DATE then
+                        entry.date = value
+                    elseif fields[fieldIndex] == FIELD_TIME then
+                        entry.time = value
+                    elseif fields[fieldIndex] == field then
+                        entry.value = tonumber(value)
+                        return entry
+                    end
+                    fieldIndex = fieldIndex + 1
                 end
-                return values
             end
         end
         return nil
