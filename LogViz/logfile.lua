@@ -5,7 +5,7 @@ local EOL = '\n'
 local SEP = ','
 local PATTERN_FIELD = "[^,]+"
 local PATTERN_LINE = "[^\n]+\n"
-local BUFFER_SIZE = 128
+local BUFFER_SIZE = 1024
 local DATETIME_PATTERN = "(.*)%-(%d%d%d%d%-%d%d%-%d%d%-%d%d%d%d%d%d)%.csv$"
 local PATH = "/LOGS"
 

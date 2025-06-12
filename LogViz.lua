@@ -207,7 +207,7 @@ end
 function LogViz:handleButtonViewSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.viewButton:setState(Button.STATE_IDLE)
-        self:message("Reading values...")
+        self:displayWaitMessage()
         self.state = STATE_PREPARE_VIEW
     elseif event == EVT_VIRTUAL_NEXT then
         self.viewButton:setState(Button.STATE_IDLE)
@@ -358,9 +358,10 @@ function LogViz:handleViewLog(event)
     return 0
 end
 
-function LogViz:message(text)
+function LogViz:displayWaitMessage()
     lcd.clear()
-    lcd.drawText(25, 30, "Reading values...")
+    lcd.drawText(20, 20, "Reading values...")
+    lcd.drawText(10, 30, "(can take a long time)")
 end
 
 function LogViz:updateUi()
