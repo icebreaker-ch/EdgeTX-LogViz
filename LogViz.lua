@@ -7,7 +7,8 @@ local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 local LEFT = 1
 local SMALL_FONT_H = 8
 local SMALL_FONT_W = 5
-local EXCLUDE_FIELDS = {["Date"] = true, ["Time"] = true}
+local EXCLUDE_FIELDS = { ["Date"] = true, ["Time"] = true }
+local TIME_PATTERN = "(%d%d):(%d%d):(%d%d)%.(%d%d%d)"
 
 local STATE_CHOICE_MODEL_SELECTED = 0
 local STATE_CHOICE_MODEL_EDITING = 1
@@ -22,6 +23,36 @@ local STATE_VIEW_LOG = 9
 
 local SHOW_CURSOR_HINT_SECONDS = 1
 
+-------------------
+-- Helper functions
+-------------------
+local function map(value, sourceMin, sourceMax, targetMin, targetMax)
+    return targetMin + (value - sourceMin) / (sourceMax - sourceMin) * (targetMax - targetMin)
+end
+
+local function round(value)
+    return math.floor(value + 0.5)
+end
+
+local function toMilliSeconds(timeString)
+    local hh, mm, ss, ddd
+    hh, mm, ss, ddd = string.match(timeString, TIME_PATTERN)
+    return 3600000 * tonumber(hh) + 60000 * tonumber(mm) + 1000 * tonumber(ss) + tonumber(ddd)
+end
+
+local function formatTime(milliSeconds)
+    local hh = math.floor(milliSeconds / 3600000)
+    milliSeconds = milliSeconds - hh * 3600000
+    local mm = math.floor(milliSeconds / 60000)
+    milliSeconds = milliSeconds - mm * 60000
+    local ss = math.floor(milliSeconds / 1000)
+    milliSeconds = milliSeconds - ss * 1000
+    return string.format("%02d:%02d:%02d.%03d", hh, mm, ss, milliSeconds)
+end
+
+--------------------
+-- Application class
+--------------------
 local LogViz = {}
 LogViz.__index = LogViz
 
@@ -35,10 +66,12 @@ function LogViz.new()
     self.exitButton = Button.new("Exit")
     self.viewButton = Button.new("View Log")
     self.modelSelector:setState(Selector.STATE_SELECTED)
+    self.xMin = nil
+    self.xMax = nil
     self.yMin = nil
     self.yMax = nil
     self.viewData = nil
-    self.cursorPos = 0    
+    self.cursorPos = 0
     self.cursorTimer = nil
     self.state = STATE_CHOICE_MODEL_SELECTED
     return self
@@ -226,25 +259,16 @@ end
 function LogViz:updateMinMax()
     self.yMin = nil
     self.yMax = nil
-    for _, v in pairs(self.viewData) do
-        local val = v.value
-        if val then
-            if not self.yMin or val < self.yMin then
-                self.yMin = val
+    for _, value in pairs(self.viewData) do
+        if value then
+            if not self.yMin or value < self.yMin then
+                self.yMin = value
             end
-            if not self.yMax or val > self.yMax then
-                self.yMax = val
+            if not self.yMax or value > self.yMax then
+                self.yMax = value
             end
         end
     end
-end
-
-local function map(value, sourceMin, sourceMax, targetMin, targetMax)
-    return targetMin + (value - sourceMin) / (sourceMax - sourceMin) * (targetMax - targetMin)
-end
-
-local function round(value)
-    return math.floor(value + 0.5)
 end
 
 function LogViz:updateView(showCursorHint)
@@ -259,11 +283,11 @@ function LogViz:updateView(showCursorHint)
 
         local lastX, lastY
         local pos = 0
-        for _, entry in pairs(self.viewData) do
+        for _, value in pairs(self.viewData) do
             local x = round(map(pos, 0, count - 1, 0, LCD_W - 1))
             local y
             if self.yMax ~= self.yMin then
-                y = round(map(entry.value, self.yMin, self.yMax, LCD_H - 1, SMALL_FONT_H))
+                y = round(map(value, self.yMin, self.yMax, LCD_H - 1, SMALL_FONT_H))
             else
                 y = LCD_H / 2
             end
@@ -279,12 +303,12 @@ function LogViz:updateView(showCursorHint)
         end
         lcd.drawLine(self.cursorPos, SMALL_FONT_H, self.cursorPos, LCD_H - 1, DOTTED, FORCE)
         local index = round(map(self.cursorPos, 0, LCD_W - 1, 1, #self.viewData))
-        local cursorValue = self.viewData[index].value
+        local cursorValue = self.viewData[index]
         lcd.drawText(LCD_W / 2 - 3 * SMALL_FONT_W, 0, string.format("%.2f", cursorValue), SMLSIZE)
 
         if showCursorHint then
-            local viewIndex = round(map(self.cursorPos, 0, LCD_W - 1, 1, #self.viewData))
-            local timeString = self.viewData[viewIndex].time
+            local milliSeconds = round(map(self.cursorPos, 0, LCD_W - 1, self.xMin, self.xMax))
+            local timeString = formatTime(milliSeconds)
             lcd.drawText(LCD_W / 2 - 6 * SMALL_FONT_W, LCD_H / 3 - SMALL_FONT_H, timeString, SMLSIZE + INVERS)
         end
     end
@@ -303,7 +327,7 @@ function LogViz:handlePrepareView(event)
     local maxTimeString
     local first = true
     for entry in logFile:entries(field) do
-        self.viewData[index] = entry
+        self.viewData[index] = entry.value
         if first then
             minTimeString = entry.time
             first = false
@@ -313,6 +337,8 @@ function LogViz:handlePrepareView(event)
     end
     self.cursorPos = 0
     self.cursorTimer = nil
+    self.xMin = toMilliSeconds(minTimeString)
+    self.xMax = toMilliSeconds(maxTimeString)
     self:updateMinMax()
     self:updateView(false)
     self.state = STATE_VIEW_LOG

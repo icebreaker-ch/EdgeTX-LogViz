@@ -3,7 +3,7 @@ LogFile.__index = LogFile
 
 local PATTERN_FIELD = "[^,]+"
 local PATTERN_LINE = "[^\n]+\n"
-local BUFFER_SIZE = 1024
+local BUFFER_SIZE = 512
 local DATETIME_PATTERN = "(.*)%-(%d%d%d%d%-%d%d%-%d%d%-%d%d%d%d%d%d)%.csv$"
 local PATH = "/LOGS"
 local FIELD_DATE = "Date"
@@ -20,21 +20,25 @@ end
 function LogFile:lines()
     local f = io.open(PATH .. "/" .. self.fileName, "r")
     local buffer = io.read(f, BUFFER_SIZE)
-
+    local pos = 1
     return function()
         while buffer do
-            local s, e = string.find(buffer, PATTERN_LINE)
+            local s, e = string.find(buffer, PATTERN_LINE, pos)
             if s and e then
-                local line = string.sub(buffer, s, e)
-                buffer = string.sub(buffer, e + 1, #buffer) -- set buffer to not processed chars
-                return (line)
+                pos = e + 1
+                return string.sub(buffer, s, e)
             else
+                collectgarbage() -- reading new chunk is memory critical!
                 local chunk = io.read(f, BUFFER_SIZE)
                 if chunk and #chunk > 0 then
-                    buffer = buffer .. chunk --append buffer
+                    buffer = string.sub(buffer, pos, #buffer) .. chunk --append new chunk to buffer
+                    pos = 1
+                    chunk = nil -- try to help the gc
+                    collectgarbage()
                 else
                     buffer = nil
                     io.close(f)
+                    collectgarbage()
                     return nil
                 end
             end
