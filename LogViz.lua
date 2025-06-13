@@ -21,7 +21,7 @@ local STATE_BUTTON_VIEW_SELECTED = 7
 local STATE_PREPARE_VIEW = 8
 local STATE_VIEW_LOG = 9
 
-local SHOW_CURSOR_HINT_SECONDS = 1
+local SHOW_CURSOR_TOOLTIP_SECONDS = 1
 
 -------------------
 -- Helper functions
@@ -271,7 +271,7 @@ function LogViz:updateMinMax()
     end
 end
 
-function LogViz:updateView(showCursorHint)
+function LogViz:updateView(showToolTip)
     local field = self.fieldSelector:getValue()
 
     lcd.clear()
@@ -306,7 +306,7 @@ function LogViz:updateView(showCursorHint)
         local cursorValue = self.viewData[index]
         lcd.drawText(LCD_W / 2 - 3 * SMALL_FONT_W, 0, string.format("%.2f", cursorValue), SMLSIZE)
 
-        if showCursorHint then
+        if showToolTip then
             local milliSeconds = round(map(self.cursorPos, 0, LCD_W - 1, self.xMin, self.xMax))
             local timeString = formatTime(milliSeconds)
             lcd.drawText(LCD_W / 2 - 6 * SMALL_FONT_W, LCD_H / 3 - SMALL_FONT_H, timeString, SMLSIZE + INVERS)
@@ -345,29 +345,36 @@ function LogViz:handlePrepareView(event)
     return 0
 end
 
+function LogViz:changeCursorPos(offset)
+    self.cursorPos = self.cursorPos + offset
+    if self.cursorPos > LCD_W - 1 then
+        self.cursorPos = LCD_W - 1
+    elseif self.cursorPos < 0 then
+        self.cursorPos = 0
+    end
+    self:updateView(true)
+    self.cursorTimer = getRtcTime()
+end
+
 function LogViz:handleViewLog(event)
     if event == EVT_VIRTUAL_NEXT then
-        self.cursorPos = self.cursorPos + 1
-        if self.cursorPos > LCD_W - 1 then
-            self.cursorPos = LCD_W - 1
-        end
-        self:updateView(true)
-        self.cursorTimer = getRtcTime()
+        self:changeCursorPos(1)
     elseif event == EVT_VIRTUAL_PREV then
-        self.cursorPos = self.cursorPos - 1
-        if self.cursorPos < 0 then
-            self.cursorPos = 0
-        end
-        self:updateView(true)
-        self.cursorTimer = getRtcTime()
+        self:changeCursorPos(-1)
     elseif event == EVT_VIRTUAL_EXIT then
         self.fieldSelector:setState(Selector.STATE_SELECTED)
         self.state = STATE_CHOICE_FIELD_SELECTED
     else
-        if self.cursorTimer and getRtcTime() - self.cursorTimer > SHOW_CURSOR_HINT_SECONDS then
-            self:updateView(false)
-            self.cursorTimer = nil
+        local stick = getSourceValue(1) -- Navigate by stick
+        if stick > 100 then
+            self:changeCursorPos(stick / 100)
+        elseif stick < -100 then
+            self:changeCursorPos(stick / 100)
         end
+    end
+    if self.cursorTimer and getRtcTime() - self.cursorTimer > SHOW_CURSOR_TOOLTIP_SECONDS then
+        self:updateView(false)
+        self.cursorTimer = nil
     end
     return 0
 end
