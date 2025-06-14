@@ -5,8 +5,10 @@ local Button = loadfile(LIB_DIR .. "button.lua")()
 local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 
 local LEFT = 1
-local SMALL_FONT_H = 8
-local SMALL_FONT_W = 5
+local FONT_W
+local FONT_H
+local SMALL_FONT_W
+local SMALL_FONT_H
 local EXCLUDE_FIELDS = { ["Date"] = true, ["Time"] = true }
 local TIME_PATTERN = "(%d%d):(%d%d):(%d%d)%.(%d%d%d)"
 
@@ -48,6 +50,28 @@ local function formatTime(milliSeconds)
     local ss = math.floor(milliSeconds / 1000)
     milliSeconds = milliSeconds - ss * 1000
     return string.format("%02d:%02d:%02d.%03d", hh, mm, ss, milliSeconds)
+end
+
+local ALIGN_LEFT = 0
+local ALIGN_CENTER = 1
+local ALIGN_RIGHT = 2
+
+local function alignText(text, yPos, flags, align)
+    local fontW
+    if not flags or flags == 0 then
+        fontW = FONT_W
+    elseif flags & SMLSIZE then
+        fontW = SMALL_FONT_W
+    end
+    local xPos
+    if align == ALIGN_LEFT then
+        xPos = 0
+    elseif align == ALIGN_CENTER then
+        xPos = (LCD_W - #text * fontW) / 2
+    elseif align == ALIGN_RIGHT then
+        xPos = LCD_W - 1 - #text * fontW
+    end
+    lcd.drawText(xPos, yPos, text, flags)
 end
 
 --------------------
@@ -93,7 +117,22 @@ function LogViz:onFileChange(index)
     self.fieldSelector:setIndex(1)
 end
 
+function LogViz:initScreen()
+    if lcd.RGB then
+        FONT_W, FONT_H = lcd.sizeText("Wg")
+        FONT_W = FONT_W / 2
+        SMALL_FONT_W, SMALL_FONT_H = lcd.sizeText("Wg", SMLSIZE)
+        SMALL_FONT_W = SMALL_FONT_W / 2
+    else
+        FONT_W = 5
+        FONT_H = 7
+        SMALL_FONT_W = 4
+        SMALL_FONT_H = 6
+    end
+end
+
 function LogViz:init()
+    self:initScreen()
     self.logFiles:read()
     local models = self.logFiles:getModels()
     self.modelSelector:setOnChange(function(index) self:onModelChange(index) end)
@@ -277,9 +316,9 @@ function LogViz:updateView(showToolTip)
     lcd.clear()
     local count = #self.viewData
     if self.yMin and self.yMax then
-        lcd.drawText(0, 0, string.format("%.2f", self.yMax), SMLSIZE)
-        lcd.drawText(0, LCD_H - SMALL_FONT_H, string.format("%.2f", self.yMin), SMLSIZE)
-        lcd.drawText(LCD_W - SMALL_FONT_W * #field, 0, field, SMLSIZE)
+        alignText(string.format("%.2f", self.yMax), 0, SMLSIZE, ALIGN_LEFT)
+        alignText(string.format("%.2f", self.yMin), LCD_H - SMALL_FONT_H, SMLSIZE, ALIGN_LEFT)
+        alignText(field, 0, SMLSIZE, ALIGN_RIGHT)
 
         local lastX, lastY
         local pos = 0
@@ -303,13 +342,13 @@ function LogViz:updateView(showToolTip)
         end
         lcd.drawLine(self.cursorPos, SMALL_FONT_H, self.cursorPos, LCD_H - 1, DOTTED, FORCE)
         local index = round(map(self.cursorPos, 0, LCD_W - 1, 1, #self.viewData))
-        local cursorValue = self.viewData[index]
-        lcd.drawText(LCD_W / 2 - 3 * SMALL_FONT_W, 0, string.format("%.2f", cursorValue), SMLSIZE)
+        local cursorValString = string.format("%.2f", self.viewData[index])
+        alignText(cursorValString, 0, SMLSIZE, ALIGN_CENTER)
 
         if showToolTip then
             local milliSeconds = round(map(self.cursorPos, 0, LCD_W - 1, self.xMin, self.xMax))
             local timeString = formatTime(milliSeconds)
-            lcd.drawText(LCD_W / 2 - 6 * SMALL_FONT_W, LCD_H / 3 - SMALL_FONT_H, timeString, SMLSIZE + INVERS)
+            alignText(timeString, LCD_H / 3 - SMALL_FONT_H, SMLSIZE + INVERS, ALIGN_CENTER)
         end
     end
 end
@@ -381,25 +420,34 @@ end
 
 function LogViz:displayWaitMessage()
     lcd.clear()
-    lcd.drawText(20, 20, "Reading values...")
-    lcd.drawText(10, 30, "(can take a long time)")
+    local yPos = 20
+    alignText("Reading values...", yPos, 0, ALIGN_CENTER)
+    yPos = yPos + FONT_H + 2
+    alignText("(can take a long time)", yPos, 0, ALIGN_CENTER)
 end
 
 function LogViz:updateUi()
+    local COL = { LEFT, 7 * FONT_W }
+    local yPos = 0
     lcd.clear()
-    lcd.drawText(LEFT, 0, "LogViz", INVERS)
-    lcd.drawText(LEFT, 10, "Model:")
-    lcd.drawText(35, 10, self.modelSelector:getValue(), self.modelSelector:getFlags())
-    lcd.drawText(LEFT, 20, "File:")
-    lcd.drawText(35, 20, self.fileSelector:getValue(), self.fileSelector:getFlags())
-    lcd.drawText(LEFT, 30, "Size:")
-    lcd.drawText(35, 30, self.fileSizeText)
-    lcd.drawText(LEFT, 40, "Field:")
-    lcd.drawText(35, 40, self.fieldSelector:getValue(), self.fieldSelector:getFlags())
-    lcd.drawText(LEFT, 50, self.exitButton:getText(), self.exitButton:getFlags())
-    lcd.drawText(35, 50, self.viewButton:getText(), self.viewButton:getFlags())
+    lcd.drawText(COL[1], yPos, "LogViz", INVERS)
+    yPos = yPos + FONT_H + 2
+    lcd.drawText(COL[1], yPos, "Model:")
+    lcd.drawText(COL[2], yPos, self.modelSelector:getValue(), self.modelSelector:getFlags())
+    yPos = yPos + FONT_H + 2
+    lcd.drawText(COL[1], yPos, "File:")
+    lcd.drawText(COL[2], yPos, self.fileSelector:getValue(), self.fileSelector:getFlags())
+    yPos = yPos + FONT_H + 2
+    lcd.drawText(COL[1], yPos, "Size:")
+    lcd.drawText(COL[2], yPos, self.fileSizeText)
+    yPos = yPos + FONT_H + 2
+    lcd.drawText(COL[1], yPos, "Field:")
+    lcd.drawText(COL[2], yPos, self.fieldSelector:getValue(), self.fieldSelector:getFlags())
+    yPos = yPos + FONT_H + 10
+    lcd.drawText(COL[1], yPos, self.exitButton:getText(), self.exitButton:getFlags())
+    lcd.drawText(COL[2], yPos, self.viewButton:getText(), self.viewButton:getFlags())
 end
 
-local logViewer = LogViz.new()
+local logViz = LogViz.new()
 
-return { init = function() logViewer:init() end, run = function(event) return logViewer:run(event) end }
+return { init = function() logViz:init() end, run = function(event) return logViz:run(event) end }
