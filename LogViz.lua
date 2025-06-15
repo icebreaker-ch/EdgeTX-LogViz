@@ -4,6 +4,8 @@ local Selector = loadfile(LIB_DIR .. "selector.lua")()
 local Button = loadfile(LIB_DIR .. "button.lua")()
 local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 
+local VERSION_STRING = "v1.0.2"
+
 local LEFT = 1
 local FONT_W
 local FONT_H
@@ -22,6 +24,7 @@ local STATE_BUTTON_EXIT_SELECTED = 6
 local STATE_BUTTON_VIEW_SELECTED = 7
 local STATE_PREPARE_VIEW = 8
 local STATE_VIEW_LOG = 9
+local STATE_NO_FILES = 10
 
 local SHOW_CURSOR_TOOLTIP_SECONDS = 1
 
@@ -134,14 +137,18 @@ end
 
 function LogViz:init()
     self:initScreen()
-    self.logFiles:read()
-    local models = self.logFiles:getModels()
-    self.modelSelector:setOnChange(function(index) self:onModelChange(index) end)
-    self.modelSelector:setValues(models)
-    self.modelSelector:setIndex(1)
+    self.logFileCount = self.logFiles:read()
+    if self.logFileCount > 0 then
+        local models = self.logFiles:getModels()
+        self.modelSelector:setOnChange(function(index) self:onModelChange(index) end)
+        self.modelSelector:setValues(models)
+        self.modelSelector:setIndex(1)
 
-    self.fileSelector:setOnChange(function(index) self:onFileChange(index) end)
-    self.modelSelector:setIndex(1)
+        self.fileSelector:setOnChange(function(index) self:onFileChange(index) end)
+        self.modelSelector:setIndex(1)
+    else
+        self.state = STATE_NO_FILES
+    end
 end
 
 function LogViz:run(event)
@@ -166,6 +173,8 @@ function LogViz:run(event)
         result = self:handlePrepareView(event)
     elseif self.state == STATE_VIEW_LOG then
         result = self:handleViewLog(event)
+    elseif self.state == STATE_NO_FILES then
+        result = self:handleNoFiles(event)
     end
     return result
 end
@@ -379,7 +388,7 @@ function LogViz:handlePrepareView(event)
     self.cursorTimer = nil
     self.xMin = toMilliSeconds(minTimeString)
     self.xMax = toMilliSeconds(maxTimeString)
-    if self.xMax < self.xMin then -- passed midnight
+    if self.xMax < self.xMin then                   -- passed midnight
         self.xMax = self.xMax + 24 * 60 * 60 * 1000 -- add 24 hours
     end
     self:updateMinMax()
@@ -432,11 +441,22 @@ function LogViz:displayWaitMessage()
     alignText("(can take a long time)", yPos, 0, ALIGN_CENTER)
 end
 
+function LogViz:handleNoFiles(event)
+    lcd.clear()
+    alignText("No Log Files found", LCD_H / 2 - FONT_H, 0, ALIGN_CENTER)
+    alignText("Press RTN to exit", LCD_H / 2 + FONT_H, 0, ALIGN_CENTER)
+    if event == EVT_VIRTUAL_EXIT then
+        return 1
+    end
+    return 0
+end
+
 function LogViz:updateUi()
     local COL = { LEFT, 7 * FONT_W }
     local yPos = 0
     lcd.clear()
     lcd.drawText(COL[1], yPos, "LogViz", INVERS)
+    alignText(VERSION_STRING, yPos, SMLSIZE, ALIGN_RIGHT)
     yPos = yPos + FONT_H + 2
     lcd.drawText(COL[1], yPos, "Model:")
     lcd.drawText(COL[2], yPos, self.modelSelector:getValue(), self.modelSelector:getFlags())

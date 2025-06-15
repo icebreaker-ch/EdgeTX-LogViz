@@ -18,6 +18,7 @@ function LogFiles.new()
 end
 
 function LogFiles:read()
+    local logFileCount = 0
     self.logFiles = {}
     for f in dir(LOG_DIR) do
         local model, date, time = string.match(f, LOGFILE_PATTERN)
@@ -26,8 +27,10 @@ function LogFiles:read()
                 self.logFiles[model] = {}
             end
             append(self.logFiles[model], LogFile.new(f))
+            logFileCount = logFileCount + 1
         end
     end
+    return logFileCount
 end
 
 function LogFiles:getModels()
