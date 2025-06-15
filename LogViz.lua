@@ -49,6 +49,7 @@ end
 local function formatTime(milliSeconds)
     local hh = math.floor(milliSeconds / 3600000)
     milliSeconds = milliSeconds - hh * 3600000
+    hh = hh % 24 -- handle midnight passing
     local mm = math.floor(milliSeconds / 60000)
     milliSeconds = milliSeconds - mm * 60000
     local ss = math.floor(milliSeconds / 1000)
@@ -378,6 +379,9 @@ function LogViz:handlePrepareView(event)
     self.cursorTimer = nil
     self.xMin = toMilliSeconds(minTimeString)
     self.xMax = toMilliSeconds(maxTimeString)
+    if self.xMax < self.xMin then -- passed midnight
+        self.xMax = self.xMax + 24 * 60 * 60 * 1000 -- add 24 hours
+    end
     self:updateMinMax()
     self:updateView(false)
     self.state = STATE_VIEW_LOG
