@@ -25,6 +25,10 @@ local STATE_VIEW_LOG = 9
 
 local SHOW_CURSOR_TOOLTIP_SECONDS = 1
 
+local ALIGN_LEFT = 0
+local ALIGN_CENTER = 1
+local ALIGN_RIGHT = 2
+
 -------------------
 -- Helper functions
 -------------------
@@ -51,10 +55,6 @@ local function formatTime(milliSeconds)
     milliSeconds = milliSeconds - ss * 1000
     return string.format("%02d:%02d:%02d.%03d", hh, mm, ss, milliSeconds)
 end
-
-local ALIGN_LEFT = 0
-local ALIGN_CENTER = 1
-local ALIGN_RIGHT = 2
 
 local function alignText(text, yPos, flags, align)
     local fontW
@@ -403,6 +403,8 @@ function LogViz:handleViewLog(event)
     elseif event == EVT_VIRTUAL_EXIT then
         self.fieldSelector:setState(Selector.STATE_SELECTED)
         self.state = STATE_CHOICE_FIELD_SELECTED
+    elseif event == EVT_VIRTUAL_ENTER then
+        self:changeCursorPos(0)
     else
         local stick = getSourceValue(1) -- Navigate by stick
         if stick > 100 then
