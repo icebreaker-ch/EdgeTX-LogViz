@@ -30,6 +30,7 @@ To view the time stamp of the current cursor position, press ```Enter```
 ### Radiomaster Zorro
 ![screenshot_zorro_25-06-15_08-48-46](https://github.com/user-attachments/assets/36151dc7-2829-4060-95dd-5586a79cb925)
 ![screenshot_zorro_25-06-15_08-48-35](https://github.com/user-attachments/assets/a964c060-7366-4ada-968e-780b93bf1401)
+![screenshot_zorro_25-06-15_13-04-28](https://github.com/user-attachments/assets/6ff96b18-a23d-4822-abf1-8a6ae3aeb365)
 
 ### Taranis X9D
 ![screenshot_x9d+2019_25-06-15_08-27-02](https://github.com/user-attachments/assets/6b85400b-0fb4-4a66-907f-553811f06e46)
