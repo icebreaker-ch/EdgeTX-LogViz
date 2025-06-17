@@ -24,7 +24,8 @@ local STATE_BUTTON_EXIT_SELECTED = 6
 local STATE_BUTTON_VIEW_SELECTED = 7
 local STATE_PREPARE_VIEW = 8
 local STATE_VIEW_LOG = 9
-local STATE_NO_FILES = 10
+local STATE_ERROR = 10
+local STATE_FATAL_ERROR = 11
 
 local SHOW_CURSOR_TOOLTIP_SECONDS = 1
 
@@ -89,7 +90,7 @@ function LogViz.new()
     self.logFiles = LogFiles.new()
     self.modelSelector = Selector.new()
     self.fileSelector = Selector.new()
-    self.fileSizeText = ""
+    self.fileSize = 0
     self.fieldSelector = Selector.new()
     self.exitButton = Button.new("Exit")
     self.viewButton = Button.new("View Log")
@@ -115,7 +116,7 @@ end
 function LogViz:onFileChange(index)
     local model = self.modelSelector:getValue()
     local logFile = self.logFiles:getFile(model, index)
-    self.fileSizeText = string.format("%d", logFile:getSize())
+    self.fileSize = logFile:getSize()
     local fields = logFile:getFields(EXCLUDE_FIELDS)
     self.fieldSelector:setValues(fields)
     self.fieldSelector:setIndex(1)
@@ -147,7 +148,8 @@ function LogViz:init()
         self.fileSelector:setOnChange(function(index) self:onFileChange(index) end)
         self.modelSelector:setIndex(1)
     else
-        self.state = STATE_NO_FILES
+        self.errorMessage = "No Logfiles found"
+        self.state = STATE_FATAL_ERROR
     end
 end
 
@@ -173,8 +175,10 @@ function LogViz:run(event)
         result = self:handlePrepareView(event)
     elseif self.state == STATE_VIEW_LOG then
         result = self:handleViewLog(event)
-    elseif self.state == STATE_NO_FILES then
-        result = self:handleNoFiles(event)
+    elseif self.state == STATE_ERROR then
+        result = self:handleError(event)
+    elseif self.state == STATE_FATAL_ERROR then
+        result = self:handleFatalError(event)
     end
     return result
 end
@@ -271,7 +275,7 @@ end
 
 function LogViz:handleButtonExitSelected(event)
     if event == EVT_VIRTUAL_ENTER then
-        self.exitButton:setState(Button.STATE_SELECTED)
+        self.exitButton:setState(Button.STATE_IDLE)
         return 1 -- Exit
     elseif event == EVT_VIRTUAL_NEXT then
         self.exitButton:setState(Button.STATE_IDLE)
@@ -384,16 +388,23 @@ function LogViz:handlePrepareView(event)
         maxTimeString = entry.time
         index = index + 1
     end
-    self.cursorPos = 0
-    self.cursorTimer = nil
-    self.xMin = toMilliSeconds(minTimeString)
-    self.xMax = toMilliSeconds(maxTimeString)
-    if self.xMax < self.xMin then                   -- passed midnight
-        self.xMax = self.xMax + 24 * 60 * 60 * 1000 -- add 24 hours
+
+    if index > 1 then
+        self.cursorPos = 0
+        self.cursorTimer = nil
+        self.xMin = toMilliSeconds(minTimeString)
+        self.xMax = toMilliSeconds(maxTimeString)
+        if self.xMax < self.xMin then               -- passed midnight
+            self.xMax = self.xMax + 24 * 60 * 60 * 1000 -- add 24 hours
+        end
+        self:updateMinMax()
+        self:updateView(false)
+        self.state = STATE_VIEW_LOG
+    else
+        self.errorMessage = "No entries found"
+        self.viewButton:setState(Button.STATE_IDLE)
+        self.state = STATE_ERROR
     end
-    self:updateMinMax()
-    self:updateView(false)
-    self.state = STATE_VIEW_LOG
     return 0
 end
 
@@ -441,10 +452,25 @@ function LogViz:displayWaitMessage()
     alignText("(can take a long time)", yPos, 0, ALIGN_CENTER)
 end
 
-function LogViz:handleNoFiles(event)
+function LogViz:handleError(event)
     lcd.clear()
-    alignText("No Log Files found", LCD_H / 2 - FONT_H, 0, ALIGN_CENTER)
-    alignText("Press RTN to exit", LCD_H / 2 + FONT_H, 0, ALIGN_CENTER)
+    local yPos = 20
+    alignText(self.errorMessage, yPos, 0, ALIGN_CENTER)
+    yPos = yPos + FONT_H + 2
+    alignText("Press RTN to exit", yPos, 0, ALIGN_CENTER)
+    if event == EVT_VIRTUAL_EXIT then
+        self.modelSelector:setState(Selector.STATE_SELECTED)
+        self.state = STATE_CHOICE_MODEL_SELECTED
+    end
+    return 0
+end
+
+function LogViz:handleFatalError(event)
+    lcd.clear()
+    local yPos = 20
+    alignText(self.errorMessage , yPos, 0, ALIGN_CENTER)
+    yPos = yPos + FONT_H + 2
+    alignText("Press RTN to exit", yPos, 0, ALIGN_CENTER)
     if event == EVT_VIRTUAL_EXIT then
         return 1
     end
@@ -465,7 +491,7 @@ function LogViz:updateUi()
     lcd.drawText(COL[2], yPos, self.fileSelector:getValue(), self.fileSelector:getFlags())
     yPos = yPos + FONT_H + 2
     lcd.drawText(COL[1], yPos, "Size:")
-    lcd.drawText(COL[2], yPos, self.fileSizeText)
+    lcd.drawText(COL[2], yPos, string.format("%d", self.fileSize))
     yPos = yPos + FONT_H + 2
     lcd.drawText(COL[1], yPos, "Field:")
     lcd.drawText(COL[2], yPos, self.fieldSelector:getValue(), self.fieldSelector:getFlags())
