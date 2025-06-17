@@ -4,7 +4,7 @@ local Selector = loadfile(LIB_DIR .. "selector.lua")()
 local Button = loadfile(LIB_DIR .. "button.lua")()
 local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 
-local VERSION_STRING = "v1.0.3"
+local VERSION_STRING = "v1.0.2"
 
 local LEFT = 1
 local FONT_W
