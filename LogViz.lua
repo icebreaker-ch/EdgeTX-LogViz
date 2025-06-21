@@ -4,7 +4,7 @@ local Selector = loadfile(LIB_DIR .. "selector.lua")()
 local Button = loadfile(LIB_DIR .. "button.lua")()
 local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 
-local VERSION_STRING = "v1.0.2"
+local VERSION_STRING = "v1.0.3"
 
 local LEFT = 1
 local FONT_W
@@ -13,25 +13,28 @@ local SMALL_FONT_W
 local SMALL_FONT_H
 local EXCLUDE_FIELDS = { ["Date"] = true, ["Time"] = true }
 local TIME_PATTERN = "(%d%d):(%d%d):(%d%d)%.(%d%d%d)"
-
-local STATE_CHOICE_MODEL_SELECTED = 0
-local STATE_CHOICE_MODEL_EDITING = 1
-local STATE_CHOICE_FILE_SELECTED = 2
-local STATE_CHOICE_FILE_EDITING = 3
-local STATE_CHOICE_FIELD_SELECTED = 4
-local STATE_CHOICE_FIELD_EDITING = 5
-local STATE_BUTTON_EXIT_SELECTED = 6
-local STATE_BUTTON_VIEW_SELECTED = 7
-local STATE_PREPARE_VIEW = 8
-local STATE_VIEW_LOG = 9
-local STATE_ERROR = 10
-local STATE_FATAL_ERROR = 11
-
 local SHOW_CURSOR_TOOLTIP_SECONDS = 1
 
-local ALIGN_LEFT = 0
-local ALIGN_CENTER = 1
-local ALIGN_RIGHT = 2
+local STATE = {
+    CHOICE_MODEL_SELECTED = 0,
+    CHOICE_MODEL_EDITING = 1,
+    CHOICE_FILE_SELECTED = 2,
+    CHOICE_FILE_EDITING = 3,
+    CHOICE_FIELD_SELECTED = 4,
+    CHOICE_FIELD_EDITING = 5,
+    BUTTON_EXIT_SELECTED = 6,
+    BUTTON_VIEW_SELECTED = 7,
+    PREPARE_VIEW = 8,
+    VIEW_LOG = 9,
+    ERROR = 10,
+    FATAL_ERROR = 11,
+}
+
+local ALIGN = {
+    LEFT = 0,
+    CENTER = 1,
+    RIGHT = 2
+}
 
 -------------------
 -- Helper functions
@@ -69,11 +72,11 @@ local function alignText(text, yPos, flags, align)
         fontW = SMALL_FONT_W
     end
     local xPos
-    if align == ALIGN_LEFT then
+    if align == ALIGN.LEFT then
         xPos = 0
-    elseif align == ALIGN_CENTER then
+    elseif align == ALIGN.CENTER then
         xPos = (LCD_W - #text * fontW) / 2
-    elseif align == ALIGN_RIGHT then
+    elseif align == ALIGN.RIGHT then
         xPos = LCD_W - 1 - #text * fontW
     end
     lcd.drawText(xPos, yPos, text, flags)
@@ -102,7 +105,7 @@ function LogViz.new()
     self.viewData = nil
     self.cursorPos = 0
     self.cursorTimer = nil
-    self.state = STATE_CHOICE_MODEL_SELECTED
+    self.state = STATE.CHOICE_MODEL_SELECTED
     return self
 end
 
@@ -149,35 +152,35 @@ function LogViz:init()
         self.modelSelector:setIndex(1)
     else
         self.errorMessage = "No Logfiles found"
-        self.state = STATE_FATAL_ERROR
+        self.state = STATE.FATAL_ERROR
     end
 end
 
 function LogViz:run(event)
     local result = 0
-    if self.state == STATE_CHOICE_MODEL_SELECTED then
+    if self.state == STATE.CHOICE_MODEL_SELECTED then
         result = self:handleModelSelected(event)
-    elseif self.state == STATE_CHOICE_MODEL_EDITING then
+    elseif self.state == STATE.CHOICE_MODEL_EDITING then
         result = self:handleModelEditing(event)
-    elseif self.state == STATE_CHOICE_FILE_SELECTED then
+    elseif self.state == STATE.CHOICE_FILE_SELECTED then
         result = self:handleFileSelected(event)
-    elseif self.state == STATE_CHOICE_FILE_EDITING then
+    elseif self.state == STATE.CHOICE_FILE_EDITING then
         result = self:handleFileEditing(event)
-    elseif self.state == STATE_CHOICE_FIELD_SELECTED then
+    elseif self.state == STATE.CHOICE_FIELD_SELECTED then
         result = self:handleFieldSelected(event)
-    elseif self.state == STATE_CHOICE_FIELD_EDITING then
+    elseif self.state == STATE.CHOICE_FIELD_EDITING then
         result = self:handleFieldEditing(event)
-    elseif self.state == STATE_BUTTON_EXIT_SELECTED then
+    elseif self.state == STATE.BUTTON_EXIT_SELECTED then
         result = self:handleButtonExitSelected(event)
-    elseif self.state == STATE_BUTTON_VIEW_SELECTED then
+    elseif self.state == STATE.BUTTON_VIEW_SELECTED then
         result = self:handleButtonViewSelected(event)
-    elseif self.state == STATE_PREPARE_VIEW then
+    elseif self.state == STATE.PREPARE_VIEW then
         result = self:handlePrepareView(event)
-    elseif self.state == STATE_VIEW_LOG then
+    elseif self.state == STATE.VIEW_LOG then
         result = self:handleViewLog(event)
-    elseif self.state == STATE_ERROR then
+    elseif self.state == STATE.ERROR then
         result = self:handleError(event)
-    elseif self.state == STATE_FATAL_ERROR then
+    elseif self.state == STATE.FATAL_ERROR then
         result = self:handleFatalError(event)
     end
     return result
@@ -186,15 +189,15 @@ end
 function LogViz:handleModelSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.modelSelector:setState(Selector.STATE_EDITING)
-        self.state = STATE_CHOICE_MODEL_EDITING
+        self.state = STATE.CHOICE_MODEL_EDITING
     elseif event == EVT_VIRTUAL_NEXT then
         self.modelSelector:setState(Selector.STATE_IDLE)
         self.fileSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FILE_SELECTED
+        self.state = STATE.CHOICE_FILE_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
         self.modelSelector:setState(Selector.STATE_IDLE)
         self.viewButton:setState(Button.STATE_SELECTED)
-        self.state = STATE_BUTTON_VIEW_SELECTED
+        self.state = STATE.BUTTON_VIEW_SELECTED
     end
     self:updateUi()
     return 0
@@ -207,7 +210,7 @@ function LogViz:handleModelEditing(event)
         self.modelSelector:decValue()
     elseif event == EVT_VIRTUAL_ENTER then
         self.modelSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_MODEL_SELECTED
+        self.state = STATE.CHOICE_MODEL_SELECTED
     end
     self:updateUi()
     return 0
@@ -216,15 +219,15 @@ end
 function LogViz:handleFileSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.fileSelector:setState(Selector.STATE_EDITING)
-        self.state = STATE_CHOICE_FILE_EDITING
+        self.state = STATE.CHOICE_FILE_EDITING
     elseif event == EVT_VIRTUAL_NEXT then
         self.fileSelector:setState(Selector.STATE_IDLE)
         self.fieldSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FIELD_SELECTED
+        self.state = STATE.CHOICE_FIELD_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
         self.fileSelector:setState(Selector.STATE_IDLE)
         self.modelSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_MODEL_SELECTED
+        self.state = STATE.CHOICE_MODEL_SELECTED
     end
     self:updateUi()
     return 0
@@ -237,7 +240,7 @@ function LogViz:handleFileEditing(event)
         self.fileSelector:decValue()
     elseif event == EVT_VIRTUAL_ENTER then
         self.fileSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FILE_SELECTED
+        self.state = STATE.CHOICE_FILE_SELECTED
     end
     self:updateUi()
     return 0
@@ -246,15 +249,15 @@ end
 function LogViz:handleFieldSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.fieldSelector:setState(Selector.STATE_EDITING)
-        self.state = STATE_CHOICE_FIELD_EDITING
+        self.state = STATE.CHOICE_FIELD_EDITING
     elseif event == EVT_VIRTUAL_NEXT then
         self.fieldSelector:setState(Selector.STATE_IDLE)
         self.exitButton:setState(Button.STATE_SELECTED)
-        self.state = STATE_BUTTON_EXIT_SELECTED
+        self.state = STATE.BUTTON_EXIT_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
         self.fieldSelector:setState(Selector.STATE_IDLE)
         self.fileSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FILE_SELECTED
+        self.state = STATE.CHOICE_FILE_SELECTED
     end
     self:updateUi()
     return 0
@@ -267,7 +270,7 @@ function LogViz:handleFieldEditing(event)
         self.fieldSelector:decValue()
     elseif event == EVT_VIRTUAL_ENTER then
         self.fieldSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FIELD_SELECTED
+        self.state = STATE.CHOICE_FIELD_SELECTED
     end
     self:updateUi()
     return 0
@@ -280,11 +283,11 @@ function LogViz:handleButtonExitSelected(event)
     elseif event == EVT_VIRTUAL_NEXT then
         self.exitButton:setState(Button.STATE_IDLE)
         self.viewButton:setState(Button.STATE_SELECTED)
-        self.state = STATE_BUTTON_VIEW_SELECTED
+        self.state = STATE.BUTTON_VIEW_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
         self.exitButton:setState(Button.STATE_IDLE)
         self.fieldSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FIELD_SELECTED
+        self.state = STATE.CHOICE_FIELD_SELECTED
     end
     self:updateUi()
     return 0
@@ -294,16 +297,16 @@ function LogViz:handleButtonViewSelected(event)
     if event == EVT_VIRTUAL_ENTER then
         self.viewButton:setState(Button.STATE_IDLE)
         self:displayWaitMessage()
-        self.state = STATE_PREPARE_VIEW
+        self.state = STATE.PREPARE_VIEW
     elseif event == EVT_VIRTUAL_NEXT then
         self.viewButton:setState(Button.STATE_IDLE)
         self.modelSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_MODEL_SELECTED;
+        self.state = STATE.CHOICE_MODEL_SELECTED;
         self:updateUi()
     elseif event == EVT_VIRTUAL_PREV then
         self.viewButton:setState(Button.STATE_IDLE)
         self.exitButton:setState(Selector.STATE_SELECTED)
-        self.state = STATE_BUTTON_EXIT_SELECTED
+        self.state = STATE.BUTTON_EXIT_SELECTED
         self:updateUi()
     end
     return 0
@@ -330,9 +333,9 @@ function LogViz:updateView(showToolTip)
     lcd.clear()
     local count = #self.viewData
     if self.yMin and self.yMax then
-        alignText(string.format("%.2f", self.yMax), 0, SMLSIZE, ALIGN_LEFT)
-        alignText(string.format("%.2f", self.yMin), LCD_H - SMALL_FONT_H, SMLSIZE, ALIGN_LEFT)
-        alignText(field, 0, SMLSIZE, ALIGN_RIGHT)
+        alignText(string.format("%.2f", self.yMax), 0, SMLSIZE, ALIGN.LEFT)
+        alignText(string.format("%.2f", self.yMin), LCD_H - SMALL_FONT_H, SMLSIZE, ALIGN.LEFT)
+        alignText(field, 0, SMLSIZE, ALIGN.RIGHT)
 
         local lastX, lastY
         local pos = 0
@@ -357,12 +360,12 @@ function LogViz:updateView(showToolTip)
         lcd.drawLine(self.cursorPos, SMALL_FONT_H, self.cursorPos, LCD_H - 1, DOTTED, FORCE)
         local index = round(map(self.cursorPos, 0, LCD_W - 1, 1, #self.viewData))
         local cursorValString = string.format("%.2f", self.viewData[index])
-        alignText(cursorValString, 0, SMLSIZE, ALIGN_CENTER)
+        alignText(cursorValString, 0, SMLSIZE, ALIGN.CENTER)
 
         if showToolTip then
             local milliSeconds = round(map(self.cursorPos, 0, LCD_W - 1, self.xMin, self.xMax))
             local timeString = formatTime(milliSeconds)
-            alignText(timeString, LCD_H / 3 - SMALL_FONT_H, SMLSIZE + INVERS, ALIGN_CENTER)
+            alignText(timeString, LCD_H / 3 - SMALL_FONT_H, SMLSIZE + INVERS, ALIGN.CENTER)
         end
     end
 end
@@ -394,16 +397,16 @@ function LogViz:handlePrepareView(event)
         self.cursorTimer = nil
         self.xMin = toMilliSeconds(minTimeString)
         self.xMax = toMilliSeconds(maxTimeString)
-        if self.xMax < self.xMin then               -- passed midnight
+        if self.xMax < self.xMin then                   -- passed midnight
             self.xMax = self.xMax + 24 * 60 * 60 * 1000 -- add 24 hours
         end
         self:updateMinMax()
         self:updateView(false)
-        self.state = STATE_VIEW_LOG
+        self.state = STATE.VIEW_LOG
     else
         self.errorMessage = "No entries found"
         self.viewButton:setState(Button.STATE_IDLE)
-        self.state = STATE_ERROR
+        self.state = STATE.ERROR
     end
     return 0
 end
@@ -426,11 +429,11 @@ function LogViz:handleViewLog(event)
         self:changeCursorPos(-1)
     elseif event == EVT_VIRTUAL_EXIT then
         self.fieldSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_FIELD_SELECTED
+        self.state = STATE.CHOICE_FIELD_SELECTED
     elseif event == EVT_VIRTUAL_ENTER then
         self:changeCursorPos(0)
     else
-        local stick = getSourceValue(1) -- Navigate by stick
+        local stick = getValue("ail") -- Navigate by stick
         if stick > 100 then
             self:changeCursorPos(stick / 100)
         elseif stick < -100 then
@@ -447,20 +450,20 @@ end
 function LogViz:displayWaitMessage()
     lcd.clear()
     local yPos = 20
-    alignText("Reading values...", yPos, 0, ALIGN_CENTER)
+    alignText("Reading values...", yPos, 0, ALIGN.CENTER)
     yPos = yPos + FONT_H + 2
-    alignText("(can take a long time)", yPos, 0, ALIGN_CENTER)
+    alignText("(can take a long time)", yPos, 0, ALIGN.CENTER)
 end
 
 function LogViz:handleError(event)
     lcd.clear()
     local yPos = 20
-    alignText(self.errorMessage, yPos, 0, ALIGN_CENTER)
+    alignText(self.errorMessage, yPos, 0, ALIGN.CENTER)
     yPos = yPos + FONT_H + 2
-    alignText("Press RTN to exit", yPos, 0, ALIGN_CENTER)
+    alignText("Press RTN to exit", yPos, 0, ALIGN.CENTER)
     if event == EVT_VIRTUAL_EXIT then
         self.modelSelector:setState(Selector.STATE_SELECTED)
-        self.state = STATE_CHOICE_MODEL_SELECTED
+        self.state = STATE.CHOICE_MODEL_SELECTED
     end
     return 0
 end
@@ -468,9 +471,9 @@ end
 function LogViz:handleFatalError(event)
     lcd.clear()
     local yPos = 20
-    alignText(self.errorMessage , yPos, 0, ALIGN_CENTER)
+    alignText(self.errorMessage, yPos, 0, ALIGN.CENTER)
     yPos = yPos + FONT_H + 2
-    alignText("Press RTN to exit", yPos, 0, ALIGN_CENTER)
+    alignText("Press RTN to exit", yPos, 0, ALIGN.luaCENTER)
     if event == EVT_VIRTUAL_EXIT then
         return 1
     end
@@ -482,7 +485,7 @@ function LogViz:updateUi()
     local yPos = 0
     lcd.clear()
     lcd.drawText(COL[1], yPos, "LogViz", INVERS)
-    alignText(VERSION_STRING, yPos, SMLSIZE, ALIGN_RIGHT)
+    alignText(VERSION_STRING, yPos, SMLSIZE, ALIGN.RIGHT)
     yPos = yPos + FONT_H + 2
     lcd.drawText(COL[1], yPos, "Model:")
     lcd.drawText(COL[2], yPos, self.modelSelector:getValue(), self.modelSelector:getFlags())
