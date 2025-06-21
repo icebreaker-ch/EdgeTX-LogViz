@@ -97,7 +97,7 @@ function LogViz.new()
     self.fieldSelector = Selector.new()
     self.exitButton = Button.new("Exit")
     self.viewButton = Button.new("View Log")
-    self.modelSelector:setState(Selector.STATE_SELECTED)
+    self.modelSelector:setState(Selector.STATE.SELECTED)
     self.xMin = nil
     self.xMax = nil
     self.yMin = nil
@@ -188,15 +188,15 @@ end
 
 function LogViz:handleModelSelected(event)
     if event == EVT_VIRTUAL_ENTER then
-        self.modelSelector:setState(Selector.STATE_EDITING)
+        self.modelSelector:setState(Selector.STATE.EDITING)
         self.state = STATE.CHOICE_MODEL_EDITING
     elseif event == EVT_VIRTUAL_NEXT then
-        self.modelSelector:setState(Selector.STATE_IDLE)
-        self.fileSelector:setState(Selector.STATE_SELECTED)
+        self.modelSelector:setState(Selector.STATE.IDLE)
+        self.fileSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_FILE_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
-        self.modelSelector:setState(Selector.STATE_IDLE)
-        self.viewButton:setState(Button.STATE_SELECTED)
+        self.modelSelector:setState(Selector.STATE.IDLE)
+        self.viewButton:setState(Button.STATE.SELECTED)
         self.state = STATE.BUTTON_VIEW_SELECTED
     end
     self:updateUi()
@@ -209,7 +209,7 @@ function LogViz:handleModelEditing(event)
     elseif event == EVT_VIRTUAL_PREV then
         self.modelSelector:decValue()
     elseif event == EVT_VIRTUAL_ENTER then
-        self.modelSelector:setState(Selector.STATE_SELECTED)
+        self.modelSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_MODEL_SELECTED
     end
     self:updateUi()
@@ -218,15 +218,15 @@ end
 
 function LogViz:handleFileSelected(event)
     if event == EVT_VIRTUAL_ENTER then
-        self.fileSelector:setState(Selector.STATE_EDITING)
+        self.fileSelector:setState(Selector.STATE.EDITING)
         self.state = STATE.CHOICE_FILE_EDITING
     elseif event == EVT_VIRTUAL_NEXT then
-        self.fileSelector:setState(Selector.STATE_IDLE)
-        self.fieldSelector:setState(Selector.STATE_SELECTED)
+        self.fileSelector:setState(Selector.STATE.IDLE)
+        self.fieldSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_FIELD_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
-        self.fileSelector:setState(Selector.STATE_IDLE)
-        self.modelSelector:setState(Selector.STATE_SELECTED)
+        self.fileSelector:setState(Selector.STATE.IDLE)
+        self.modelSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_MODEL_SELECTED
     end
     self:updateUi()
@@ -239,7 +239,7 @@ function LogViz:handleFileEditing(event)
     elseif event == EVT_VIRTUAL_PREV then
         self.fileSelector:decValue()
     elseif event == EVT_VIRTUAL_ENTER then
-        self.fileSelector:setState(Selector.STATE_SELECTED)
+        self.fileSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_FILE_SELECTED
     end
     self:updateUi()
@@ -248,15 +248,15 @@ end
 
 function LogViz:handleFieldSelected(event)
     if event == EVT_VIRTUAL_ENTER then
-        self.fieldSelector:setState(Selector.STATE_EDITING)
+        self.fieldSelector:setState(Selector.STATE.EDITING)
         self.state = STATE.CHOICE_FIELD_EDITING
     elseif event == EVT_VIRTUAL_NEXT then
-        self.fieldSelector:setState(Selector.STATE_IDLE)
-        self.exitButton:setState(Button.STATE_SELECTED)
+        self.fieldSelector:setState(Selector.STATE.IDLE)
+        self.exitButton:setState(Button.STATE.SELECTED)
         self.state = STATE.BUTTON_EXIT_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
-        self.fieldSelector:setState(Selector.STATE_IDLE)
-        self.fileSelector:setState(Selector.STATE_SELECTED)
+        self.fieldSelector:setState(Selector.STATE.IDLE)
+        self.fileSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_FILE_SELECTED
     end
     self:updateUi()
@@ -269,7 +269,7 @@ function LogViz:handleFieldEditing(event)
     elseif event == EVT_VIRTUAL_PREV then
         self.fieldSelector:decValue()
     elseif event == EVT_VIRTUAL_ENTER then
-        self.fieldSelector:setState(Selector.STATE_SELECTED)
+        self.fieldSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_FIELD_SELECTED
     end
     self:updateUi()
@@ -278,15 +278,15 @@ end
 
 function LogViz:handleButtonExitSelected(event)
     if event == EVT_VIRTUAL_ENTER then
-        self.exitButton:setState(Button.STATE_IDLE)
+        self.exitButton:setState(Button.STATE.IDLE)
         return 1 -- Exit
     elseif event == EVT_VIRTUAL_NEXT then
-        self.exitButton:setState(Button.STATE_IDLE)
-        self.viewButton:setState(Button.STATE_SELECTED)
+        self.exitButton:setState(Button.STATE.IDLE)
+        self.viewButton:setState(Button.STATE.SELECTED)
         self.state = STATE.BUTTON_VIEW_SELECTED
     elseif event == EVT_VIRTUAL_PREV then
-        self.exitButton:setState(Button.STATE_IDLE)
-        self.fieldSelector:setState(Selector.STATE_SELECTED)
+        self.exitButton:setState(Button.STATE.IDLE)
+        self.fieldSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_FIELD_SELECTED
     end
     self:updateUi()
@@ -295,17 +295,17 @@ end
 
 function LogViz:handleButtonViewSelected(event)
     if event == EVT_VIRTUAL_ENTER then
-        self.viewButton:setState(Button.STATE_IDLE)
+        self.viewButton:setState(Button.STATE.IDLE)
         self:displayWaitMessage()
         self.state = STATE.PREPARE_VIEW
     elseif event == EVT_VIRTUAL_NEXT then
-        self.viewButton:setState(Button.STATE_IDLE)
-        self.modelSelector:setState(Selector.STATE_SELECTED)
+        self.viewButton:setState(Button.STATE.IDLE)
+        self.modelSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_MODEL_SELECTED;
         self:updateUi()
     elseif event == EVT_VIRTUAL_PREV then
-        self.viewButton:setState(Button.STATE_IDLE)
-        self.exitButton:setState(Selector.STATE_SELECTED)
+        self.viewButton:setState(Button.STATE.IDLE)
+        self.exitButton:setState(Selector.STATE.SELECTED)
         self.state = STATE.BUTTON_EXIT_SELECTED
         self:updateUi()
     end
@@ -405,7 +405,7 @@ function LogViz:handlePrepareView(event)
         self.state = STATE.VIEW_LOG
     else
         self.errorMessage = "No entries found"
-        self.viewButton:setState(Button.STATE_IDLE)
+        self.viewButton:setState(Button.STATE.IDLE)
         self.state = STATE.ERROR
     end
     return 0
@@ -428,7 +428,7 @@ function LogViz:handleViewLog(event)
     elseif event == EVT_VIRTUAL_PREV then
         self:changeCursorPos(-1)
     elseif event == EVT_VIRTUAL_EXIT then
-        self.fieldSelector:setState(Selector.STATE_SELECTED)
+        self.fieldSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_FIELD_SELECTED
     elseif event == EVT_VIRTUAL_ENTER then
         self:changeCursorPos(0)
@@ -462,7 +462,7 @@ function LogViz:handleError(event)
     yPos = yPos + FONT_H + 2
     alignText("Press RTN to exit", yPos, 0, ALIGN.CENTER)
     if event == EVT_VIRTUAL_EXIT then
-        self.modelSelector:setState(Selector.STATE_SELECTED)
+        self.modelSelector:setState(Selector.STATE.SELECTED)
         self.state = STATE.CHOICE_MODEL_SELECTED
     end
     return 0

@@ -1,13 +1,15 @@
 local Button = {}
 Button.__index = Button
 
-Button.STATE_IDLE = 0
-Button.STATE_SELECTED = 1
+Button.STATE = {
+    IDLE = 0,
+    SELECTED = 1
+}
 
 function Button.new(text)
     local self = setmetatable({}, Button)
     self.text = text
-    self.state = self.STATE_IDLE
+    self.state = self.STATE.IDLE
     return self
 end
 
@@ -28,9 +30,9 @@ function Button:getText()
 end
 
 function Button:getFlags()
-    if self.state == self.STATE_IDLE then
+    if self.state == self.STATE.IDLE then
         return 0
-    elseif self.state == self.STATE_SELECTED then
+    elseif self.state == self.STATE.SELECTED then
         return INVERS
     end
 end
