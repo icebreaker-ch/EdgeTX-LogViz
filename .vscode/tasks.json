@@ -12,6 +12,11 @@
             "label": "distribute",
             "type": "shell",
             "command":  "${workspaceFolder}/.scripts/distribute.sh"
+        },
+        {
+            "label": "make logs",
+            "type": "shell",
+            "command":  "${workspaceFolder}/.scripts/makelogs.lua"
         }
     ]
 }
