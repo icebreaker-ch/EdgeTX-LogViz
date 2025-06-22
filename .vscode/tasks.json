@@ -4,6 +4,12 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "zip",
+            "type": "shell",
+            "command":  "zip",
+            "args": ["-r", "LogViz-v${input:version}.zip", "LogViz.lua", "LogViz"]
+        },
+        {
             "label": "diff Zorro 4i1",
             "type": "shell",
             "command":  "meld ${workspaceFolder} /data/EdgeTX/Radios/Radiomaster\\ Zorro\\ 4in1/SDCARD/SCRIPTS/TOOLS/"
@@ -17,6 +23,13 @@
             "label": "make logs",
             "type": "shell",
             "command":  "${workspaceFolder}/.scripts/makelogs.lua"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "version",
+            "description": "Version x.y.z",
+            "type": "promptString"
         }
     ]
 }
