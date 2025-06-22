@@ -64,11 +64,17 @@ local function formatTime(milliSeconds)
     return string.format("%02d:%02d:%02d.%03d", hh, mm, ss, milliSeconds)
 end
 
+-- Function for Lua version < 5.3 compatibility
+-- (missing bitwise & operator)
+local function bitTest(value, flag)
+    return value % (2 * flag) - (value % flag)
+end
+
 local function alignText(text, yPos, flags, align)
     local fontW
     if not flags or flags == 0 then
         fontW = FONT_W
-    elseif flags & SMLSIZE then
+    elseif bitTest(flags, SMLSIZE) > 0 then
         fontW = SMALL_FONT_W
     end
     local xPos
@@ -473,7 +479,7 @@ function LogViz:handleFatalError(event)
     local yPos = 20
     alignText(self.errorMessage, yPos, 0, ALIGN.CENTER)
     yPos = yPos + FONT_H + 2
-    alignText("Press RTN to exit", yPos, 0, ALIGN.luaCENTER)
+    alignText("Press RTN to exit", yPos, 0, ALIGN.CENTER)
     if event == EVT_VIRTUAL_EXIT then
         return 1
     end
