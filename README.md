@@ -43,7 +43,16 @@ To view the time stamp of the current cursor position, press ```Enter```
 
 ## Installation
 Copy the file ```LogViz.lua``` and the folder ```LogViz``` to the ```/SCRIPTS/TOOLS``` folder on the SD card.
-
+The directory structure should look like this afterwards:
+```
+/SCRIPTS/TOOLS
+  Logviz.lua
+  LogViz/
+    button.lua
+    logfile.lua
+    logfiles.lua
+    selector.lua
+```
 ## Known problems
 Due to memory limitations (especially on B&W Radios), it is possible, to run out of memory
 when reading large Logfiles. However, Logfiles of 800k have been tested without problems.
