@@ -4,12 +4,14 @@ local Selector = loadfile(LIB_DIR .. "selector.lua")()
 local Button = loadfile(LIB_DIR .. "button.lua")()
 local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 
-local VERSION_STRING = "v1.0.3"
+local VERSION_STRING = "v1.0.4d"
 
 local LEFT = 1
-local FONT_W
+local FIXED_FONT_W = 5
+local FIXED_FONT_H = 7
+local FIXED_SMALL_FONT_W = 4
+local FIXED_SMALL_FONT_H = 6
 local FONT_H
-local SMALL_FONT_W
 local SMALL_FONT_H
 local EXCLUDE_FIELDS = { ["Date"] = true, ["Time"] = true }
 local TIME_PATTERN = "(%d%d):(%d%d):(%d%d)%.(%d%d%d)"
@@ -70,20 +72,26 @@ local function bitTest(value, flag)
     return value % (2 * flag) - (value % flag)
 end
 
-local function alignText(text, yPos, flags, align)
-    local fontW
-    if not flags or flags == 0 then
-        fontW = FONT_W
+local function getTextSize(text, flags)
+    local w, h
+    if lcd.sizeText then
+        w,h = lcd.sizeText(text, flags)
+    elseif not flags or flags == 0 then
+        w,h = FIXED_FONT_W * #text, FIXED_FONT_H
     elseif bitTest(flags, SMLSIZE) > 0 then
-        fontW = SMALL_FONT_W
+        w,h = FIXED_SMALL_FONT_W * #text, FIXED_SMALL_FONT_H
     end
-    local xPos
-    if align == ALIGN.LEFT then
-        xPos = 0
-    elseif align == ALIGN.CENTER then
-        xPos = (LCD_W - #text * fontW) / 2
+    return w,h
+end
+
+local function alignText(text, yPos, flags, align)
+    local xPos = 0
+    local w
+    w,_ = getTextSize(text, flags)
+    if align == ALIGN.CENTER then
+        xPos = (LCD_W - w) / 2
     elseif align == ALIGN.RIGHT then
-        xPos = LCD_W - 1 - #text * fontW
+        xPos = LCD_W - 1 - w
     end
     lcd.drawText(xPos, yPos, text, flags)
 end
@@ -131,22 +139,13 @@ function LogViz:onFileChange(index)
     self.fieldSelector:setIndex(1)
 end
 
-function LogViz:initScreen()
-    if lcd.RGB then
-        FONT_W, FONT_H = lcd.sizeText("Wg")
-        FONT_W = FONT_W / 2
-        SMALL_FONT_W, SMALL_FONT_H = lcd.sizeText("Wg", SMLSIZE)
-        SMALL_FONT_W = SMALL_FONT_W / 2
-    else
-        FONT_W = 5
-        FONT_H = 7
-        SMALL_FONT_W = 4
-        SMALL_FONT_H = 6
-    end
+function LogViz:initFontSize()
+    _,FONT_H = getTextSize("Xg")
+    _,SMALL_FONT_H = getTextSize("Xg", SMLSIZE)
 end
 
 function LogViz:init()
-    self:initScreen()
+    self:initFontSize()
     self.logFileCount = self.logFiles:read()
     if self.logFileCount > 0 then
         local models = self.logFiles:getModels()
@@ -487,8 +486,11 @@ function LogViz:handleFatalError(event)
 end
 
 function LogViz:updateUi()
-    local COL = { LEFT, 7 * FONT_W }
+    local w
+    w,_ =  getTextSize("XXXXX: ")
     local yPos = 0
+    local COL = { LEFT, w }
+
     lcd.clear()
     lcd.drawText(COL[1], yPos, "LogViz", INVERS)
     alignText(VERSION_STRING, yPos, SMLSIZE, ALIGN.RIGHT)
