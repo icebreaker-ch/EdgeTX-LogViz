@@ -7,6 +7,8 @@ to improve the user interface and simplify operation.
 
 The script has been tested on the following radios:
 - Radiomaster Zorro
+- Radiomaster Boxer MAX
+- Radiomaster TX15 MAX
 - Horus X12S
 - Horus X10S
 - Taranis X7 ACCESS
