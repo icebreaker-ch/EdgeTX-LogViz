@@ -1,0 +1,19 @@
+{
+    "Lua.diagnostics.globals": [
+        "bit32",
+        "lcd",
+        "LCD_W",
+        "SMLSIZE",
+        "EVT_VIRTUAL_ENTER",
+        "EVT_VIRTUAL_NEXT",
+        "EVT_VIRTUAL_PREV",
+        "LCD_H",
+        "SOLID",
+        "FORCE",
+        "DOTTED",
+        "INVERS",
+        "getRtcTime",
+        "EVT_VIRTUAL_EXIT",
+        "getValue"
+    ]
+}

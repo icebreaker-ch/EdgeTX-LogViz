@@ -4,7 +4,7 @@ local Selector = loadfile(LIB_DIR .. "selector.lua")()
 local Button = loadfile(LIB_DIR .. "button.lua")()
 local LogFiles = loadfile(LIB_DIR .. "logfiles.lua")()
 
-local VERSION_STRING = "v1.0.4d"
+local VERSION_STRING = "v1.0.4"
 
 local LEFT = 1
 local FIXED_FONT_W = 5
@@ -66,20 +66,14 @@ local function formatTime(milliSeconds)
     return string.format("%02d:%02d:%02d.%03d", hh, mm, ss, milliSeconds)
 end
 
--- Function for Lua version < 5.3 compatibility
--- (missing bitwise & operator)
-local function bitTest(value, flag)
-    return value % (2 * flag) - (value % flag)
-end
-
 local function getTextSize(text, flags)
     local w, h
     if lcd.sizeText then
-        w,h = lcd.sizeText(text, flags)
-    elseif not flags or flags == 0 then
-        w,h = FIXED_FONT_W * #text, FIXED_FONT_H
-    elseif bitTest(flags, SMLSIZE) > 0 then
-        w,h = FIXED_SMALL_FONT_W * #text, FIXED_SMALL_FONT_H
+        w,h = lcd.sizeText(text, flags) -- color radio
+    elseif flags and bit32.band(flags, SMLSIZE) > 0 then
+        w,h = FIXED_SMALL_FONT_W * #text, FIXED_SMALL_FONT_H -- small fixed font
+    else
+        w,h = FIXED_FONT_W * #text, FIXED_FONT_H -- standard fixed font
     end
     return w,h
 end
